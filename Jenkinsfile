@@ -1,35 +1,46 @@
-pipeline {
-    agent any 
-    environment {
-    DOCKERHUB_CREDENTIALS = credentials('valaxy-dockerhub')
+pipeline{
+    agent any
+    
+    environment{
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-snana')
     }
-    stages { 
-        stage('SCM Checkout') {
+    
+    
+    stages {
+        stage('Git clone from github'){
             steps{
-            git 'https://github.com/ravdy/nodejs-demo.git'
+                sh 'echo Git cloning begin'
+                git 'https://github.com/isaacsnipe/nodejs-demo.git'
+                sh 'echo Git clone completed'
             }
         }
-
-        stage('Build docker image') {
-            steps {  
-                sh 'docker build -t valaxy/nodeapp:$BUILD_NUMBER .'
+        
+        stage('Build Docker Image'){
+            agent{ label "docker-agent" }
+            steps{
+                sh 'docker build -t snana/nodeapp:$BUILD_NUMBER .'
             }
         }
-        stage('login to dockerhub') {
+        
+        stage('Login to Dockerhub'){
+            agent { label "docker-agent" }
             steps{
                 sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
             }
         }
-        stage('push image') {
+        
+        stage('Docker Deploy/Push image'){
+            agent { label "docker-agent" }
             steps{
-                sh 'docker push valaxy/nodeapp:$BUILD_NUMBER'
+                sh 'docker push snana/nodeapp:$BUILD_NUMBER'
             }
         }
-}
-post {
-        always {
-            sh 'docker logout'
+        
+        stage('Logout Dockerhub'){
+            agent { label "docker-agent "}
+            steps{
+                sh 'docker logout'
+            }
         }
     }
 }
-
